@@ -4,6 +4,7 @@ const cors = require("cors");
 const axios = require('axios');
 const TeleBot = require('telebot');
 const db = require('./db/db.config');
+const UserWithDb = require('./controller/users');
 require('dotenv').config();
 const knex = require('knex')({
     client: 'pg',
@@ -21,6 +22,7 @@ const knex = require('knex')({
 const server = express();
 server.use(bodyParser.urlencoded({ extended: false }));
 server.use(bodyParser.json());
+server.use(express.json())
 server.use(cors());
 
 
@@ -99,6 +101,7 @@ bot.on('/now', (msg) => {
         .then(response => {
             let itemUSD = response.data.exchangeRate.filter(item => item.currency === "USD");
 
+            console.log(msg)
             if (itemUSD.length) {
 
                 const values = {
@@ -216,7 +219,14 @@ server.get('/', (req, res) => {
         })
 })
 
-server.listen(55000, () => {
+// app.get('/', Auth.verifyToken, (req, res) => {
+//     return res.status(200).send({ 'message': 'OK!' });
+// });
+
+server.post('/create', UserWithDb.create);
+// app.post('/login/auth', UserWithDb.login);
+
+server.listen(3001, () => {
     console.log(`App running`)
 })
 
