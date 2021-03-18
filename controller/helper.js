@@ -20,6 +20,12 @@ const Helper = {
     return validator.isEmail(email);
   },
 
+  isValidPasswords(password) {
+    let reg = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9]).{6,}/;
+
+    return reg.test(password);
+  },
+
   generateToken(id) {
     const token = jwt.sign(
       { id: id },

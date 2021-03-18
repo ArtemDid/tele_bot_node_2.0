@@ -5,6 +5,7 @@ const axios = require('axios');
 const TeleBot = require('telebot');
 const db = require('./db/db.config');
 const UserWithDb = require('./controller/users');
+const Auth = require('./middleware/auth');
 require('dotenv').config();
 const knex = require('knex')({
     client: 'pg',
@@ -32,8 +33,8 @@ const BUTTONS = {
         command: '/hello'
     },
     world: {
-        label: '🌍 Now Date',
-        command: '/now'
+        label: '🌍 Now Date Rates UAH/USD',
+        command: '/rates'
     },
     hide: {
         label: '⌨️ Hide keyboard',
@@ -88,7 +89,7 @@ bot.on(/^\d{2}(.)\d{2}\1\d{4}$/, (msg) => {
         })
 });
 
-bot.on('/now', (msg) => {
+bot.on('/rates', (msg) => {
     let date = new Date(Date.now());
     let day = date.getDate();
     let month = date.getMonth() + 1;
@@ -99,22 +100,71 @@ bot.on('/now', (msg) => {
         url: `https://api.privatbank.ua/p24api/exchange_rates?json&date=${day}.${month}.${year}`
     })
         .then(response => {
-            let itemUSD = response.data.exchangeRate.filter(item => item.currency === "USD");
+            let mas = msg.text.split(' ');
+            let itemRates = mas.length>1?mas[1]:'USD';
+            let itemUSD = response.data.exchangeRate.filter(item => item.currency === itemRates);
 
-            console.log(msg)
             if (itemUSD.length) {
 
+                console.log(mas)
+                console.log(itemUSD)
+                let saleRate = itemUSD[0].saleRate ? itemUSD[0].saleRate : itemUSD[0].saleRateNB;
+                let purchaseRate = itemUSD[0].purchaseRate ? itemUSD[0].purchaseRate : itemUSD[0].purchaseRateNB;
+    
                 const values = {
                     query: msg.text,
                     user_name: msg.from.first_name,
                     user_id: msg.from.id,
                     date: date.toISOString(),
-                    answer: `SaleRate: ${itemUSD[0].saleRate} UAH PurchaseRate: ${itemUSD[0].purchaseRate} UAH`
+                    answer: `SaleRate: ${saleRate} UAH PurchaseRate: ${purchaseRate} UAH`
                 };
                 console.log(msg.from.id)
                 knex('history_users').insert(values)
                     .then(() => {
-                        msg.reply.text(`SaleRate: ${itemUSD[0].saleRate} UAH \nPurchaseRate: ${itemUSD[0].purchaseRate} UAH`);
+                        msg.reply.text(`SaleRate: ${saleRate} UAH \nPurchaseRate: ${purchaseRate} UAH`);
+                    })
+                    .catch(error => {
+                        msg.reply.text(error.message);
+                    })
+            }
+            else msg.reply.text("Not found");
+        })
+        .catch(error => {
+            msg.reply.text(error.message);
+        })
+});
+
+bot.on('/exchange', (msg) => {
+    let date = new Date(Date.now());
+    let day = date.getDate();
+    let month = date.getMonth() + 1;
+    let year = date.getFullYear();
+
+    axios({
+        method: 'get',
+        url: `https://api.privatbank.ua/p24api/exchange_rates?json&date=${day}.${month}.${year}`
+    })
+        .then(response => {
+            let mas = msg.text.split(' ');
+            let itemUSD = response.data.exchangeRate.filter(item => item.currency === mas[mas.length-1]);
+
+            if (itemUSD.length) {
+
+                console.log(mas)
+                console.log(itemUSD)
+                let saleRate = itemUSD[0].saleRate ? itemUSD[0].saleRate : itemUSD[0].saleRateNB;
+    
+                const values = {
+                    query: msg.text,
+                    user_name: msg.from.first_name,
+                    user_id: msg.from.id,
+                    date: date.toISOString(),
+                    answer: `${mas[2]} UAH = ${mas[2]*saleRate} ${mas[4]}`
+                };
+                console.log(msg.from.id)
+                knex('history_users').insert(values)
+                    .then(() => {
+                        msg.reply.text(`${mas[2]} UAH = ${Math.ceil(mas[2]/saleRate*100)/100} ${mas[4]}`);
                     })
                     .catch(error => {
                         msg.reply.text(error.message);
@@ -160,12 +210,12 @@ bot.on('/hello', (msg) => {
         msg.from.first_name,
         msg.from.id,
         date.toISOString(),
-        'Welcome! Enter the date in the format \'dd.mm.yyyy\' or \'/now\' for the current date'
+        'Welcome! Enter the date in the format \'dd.mm.yyyy\', \'/rates\' \\ \'/rates CURRENCY\' for the current date or \'/exchange UAH SUMM = CURRENCY\''
     ];
 
     db.query(createQuery, values)
         .then(() => {
-            msg.reply.text('Welcome! \nEnter the date in the format \'dd.mm.yyyy\'\nor \'/now\' for the current date');
+            msg.reply.text('Welcome! Enter the date in the format \'dd.mm.yyyy\', \'/rates\' \\ \'/rates CURRENCY\' for the current date or \'/exchange UAH SUMM = CURRENCY\'');
         })
         .catch(error => {
             msg.reply.text(error.message);
@@ -192,7 +242,7 @@ bot.on('/start', (msg) => {
         .then(() => {
             console.log('kkk')
             let replyMarkup = bot.keyboard([
-                [BUTTONS.hello.label, BUTTONS.world.label],
+                [BUTTONS.hello.label, BUTTONS.world.command],
                 [BUTTONS.hide.label]
             ], { resize: true });
 
@@ -224,7 +274,8 @@ server.get('/', (req, res) => {
 // });
 
 server.post('/create', UserWithDb.create);
-// app.post('/login/auth', UserWithDb.login);
+server.post('/login', UserWithDb.login);
+server.post('/login/auth', Auth.verifyToken, UserWithDb.login);
 
 server.listen(3001, () => {
     console.log(`App running`)

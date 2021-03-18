@@ -14,6 +14,9 @@ const User = {
         if (!Helper.isValidEmail(req.body.email)) {
             return res.status(400).send({ 'message': 'Please enter a valid email address', 'success': false });
         }
+        if (!Helper.isValidPasswords(req.body.password)) {
+            return res.status(400).send({ 'message': 'Password must contain lowercase, uppercase letters and numbers', 'success': false });
+        }
 
         if (!await Helper.checkUser(req.body.email)) {
 
@@ -54,6 +57,10 @@ const User = {
         if (!Helper.isValidEmail(req.body.email)) {
             return res.status(400).send({ 'message': 'Please enter a valid email address', 'success': false });
         }
+        if (!Helper.isValidPasswords(req.body.password)) {
+            return res.status(400).send({ 'message': 'Password must contain lowercase, uppercase letters and numbers', 'success': false });
+        }
+        
         const createQuery = 'SELECT * FROM users WHERE login = $1';
         try {
             const { rows } = await db.query(createQuery, [req.body.email]);
