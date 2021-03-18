@@ -23,7 +23,7 @@ const knex = require('knex')({
 const server = express();
 server.use(bodyParser.urlencoded({ extended: false }));
 server.use(bodyParser.json());
-server.use(express.json())
+server.use(express.json());
 server.use(cors());
 
 
@@ -146,25 +146,28 @@ bot.on('/exchange', (msg) => {
     })
         .then(response => {
             let mas = msg.text.split(' ');
-            let itemUSD = response.data.exchangeRate.filter(item => item.currency === mas[mas.length-1]);
+            let carrency = mas[1]!=='UAH'? mas[1]:mas[mas.length-1];
+
+            let itemUSD = response.data.exchangeRate.filter(item => item.currency === carrency);
 
             if (itemUSD.length) {
 
                 console.log(mas)
                 console.log(itemUSD)
                 let saleRate = itemUSD[0].saleRate ? itemUSD[0].saleRate : itemUSD[0].saleRateNB;
+                let answer = mas[1]!=='UAH'?`${mas[2]} ${mas[1]} = ${Math.ceil((mas[2]*saleRate)*100)/100} ${mas[4]}`:`${mas[2]} ${mas[1]} = ${Math.ceil((mas[2]/saleRate)*100)/100} ${mas[mas.length-1]}`
     
                 const values = {
                     query: msg.text,
                     user_name: msg.from.first_name,
                     user_id: msg.from.id,
                     date: date.toISOString(),
-                    answer: `${mas[2]} UAH = ${mas[2]*saleRate} ${mas[4]}`
+                    answer: answer
                 };
                 console.log(msg.from.id)
                 knex('history_users').insert(values)
                     .then(() => {
-                        msg.reply.text(`${mas[2]} UAH = ${Math.ceil(mas[2]/saleRate*100)/100} ${mas[4]}`);
+                        msg.reply.text(answer);
                     })
                     .catch(error => {
                         msg.reply.text(error.message);
