@@ -289,10 +289,9 @@ bot.on('/start', async (msg) => {
 
 server.get('/', (req, res) => {
 
-    const createQuery = 'SELECT * FROM public.history_users ORDER BY "id" ASC';
-    const values = null;
+    const createQuery = 'Select history.id, name, query from accounts inner join history on accounts.id=history.account_id ORDER BY history.id ASC';
 
-    db.query(createQuery, values)
+    db.query(createQuery, null)
         .then(response => {
             res.status(200).send(response);
         })
