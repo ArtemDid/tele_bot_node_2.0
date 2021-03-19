@@ -5,6 +5,7 @@ const axios = require('axios');
 const TeleBot = require('telebot');
 const db = require('./db/db.config');
 const UserWithDb = require('./controller/users');
+const Helper = require('./controller/helper');
 const Auth = require('./middleware/auth');
 require('dotenv').config();
 const knex = require('knex')({
@@ -60,15 +61,20 @@ bot.on(/^\d{2}(.)\d{2}\1\d{4}$/, (msg) => {
         method: 'get',
         url: `https://api.privatbank.ua/p24api/exchange_rates?json&date=${msg.text}`
     })
-        .then(response => {
+        .then(async response => {
             let itemUSD = response.data.exchangeRate.filter(item => item.currency === "USD");
             if (itemUSD.length) {
-                const createQuery = `INSERT INTO history_users (query, user_name, user_id, date, answer) VALUES ($1, $2, $3, $4, $5) RETURNING *`;
+                const rows = await Helper.checkAccount(msg.from.id);
+
+                if (!rows.length) {
+                    rows = await Helper.insertAccount(msg);
+                }
+
+                const createQuery = `INSERT INTO history (account_id, date, query, response) VALUES ($1, $2, $3, $4) RETURNING *`;
                 const values = [
-                    msg.text,
-                    msg.from.first_name,
-                    msg.from.id,
+                    rows[0].id,
                     date.toISOString(),
+                    msg.text,
                     `SaleRate: ${itemUSD[0].saleRate} UAH PurchaseRate: ${itemUSD[0].purchaseRate} UAH`
                 ];
 
@@ -99,27 +105,33 @@ bot.on('/rates', (msg) => {
         method: 'get',
         url: `https://api.privatbank.ua/p24api/exchange_rates?json&date=${day}.${month}.${year}`
     })
-        .then(response => {
+        .then(async response => {
             let mas = msg.text.split(' ');
-            let itemRates = mas.length>1?mas[1]:'USD';
+            let itemRates = mas.length > 1 ? mas[1] : 'USD';
             let itemUSD = response.data.exchangeRate.filter(item => item.currency === itemRates);
 
             if (itemUSD.length) {
 
-                console.log(mas)
-                console.log(itemUSD)
+                const rows = await Helper.checkAccount(msg.from.id);
+
+                if (!rows.length) {
+                    rows = await Helper.insertAccount(msg);
+                }
+                console.log(rows)
+
+                // console.log(mas)
+                // console.log(itemUSD)
                 let saleRate = itemUSD[0].saleRate ? itemUSD[0].saleRate : itemUSD[0].saleRateNB;
                 let purchaseRate = itemUSD[0].purchaseRate ? itemUSD[0].purchaseRate : itemUSD[0].purchaseRateNB;
-    
+
                 const values = {
-                    query: msg.text,
-                    user_name: msg.from.first_name,
-                    user_id: msg.from.id,
+                    account_id: rows[0].id,
                     date: date.toISOString(),
-                    answer: `SaleRate: ${saleRate} UAH PurchaseRate: ${purchaseRate} UAH`
+                    query: msg.text,
+                    response: `SaleRate: ${saleRate} UAH PurchaseRate: ${purchaseRate} UAH`
                 };
-                console.log(msg.from.id)
-                knex('history_users').insert(values)
+                console.log(msg)
+                knex('history').insert(values)
                     .then(() => {
                         msg.reply.text(`SaleRate: ${saleRate} UAH \nPurchaseRate: ${purchaseRate} UAH`);
                     })
@@ -144,28 +156,31 @@ bot.on('/exchange', (msg) => {
         method: 'get',
         url: `https://api.privatbank.ua/p24api/exchange_rates?json&date=${day}.${month}.${year}`
     })
-        .then(response => {
+        .then(async response => {
             let mas = msg.text.split(' ');
-            let carrency = mas[1]!=='UAH'? mas[1]:mas[mas.length-1];
+            let carrency = mas[1] !== 'UAH' ? mas[1] : mas[mas.length - 1];
 
             let itemUSD = response.data.exchangeRate.filter(item => item.currency === carrency);
 
             if (itemUSD.length) {
 
-                console.log(mas)
-                console.log(itemUSD)
+                const rows = await Helper.checkAccount(msg.from.id);
+
+                if (!rows.length) {
+                    rows = await Helper.insertAccount(msg);
+                }
+
                 let saleRate = itemUSD[0].saleRate ? itemUSD[0].saleRate : itemUSD[0].saleRateNB;
-                let answer = mas[1]!=='UAH'?`${mas[2]} ${mas[1]} = ${Math.ceil((mas[2]*saleRate)*100)/100} ${mas[4]}`:`${mas[2]} ${mas[1]} = ${Math.ceil((mas[2]/saleRate)*100)/100} ${mas[mas.length-1]}`
-    
+                let answer = mas[1] !== 'UAH' ? `${mas[2]} ${mas[1]} = ${Math.ceil((mas[2] * saleRate) * 100) / 100} ${mas[4]}` : `${mas[2]} ${mas[1]} = ${Math.ceil((mas[2] / saleRate) * 100) / 100} ${mas[mas.length - 1]}`
+
                 const values = {
-                    query: msg.text,
-                    user_name: msg.from.first_name,
-                    user_id: msg.from.id,
+                    account_id: rows[0].id,
                     date: date.toISOString(),
-                    answer: answer
+                    query: msg.text,
+                    response: answer
                 };
                 console.log(msg.from.id)
-                knex('history_users').insert(values)
+                knex('history').insert(values)
                     .then(() => {
                         msg.reply.text(answer);
                     })
@@ -180,16 +195,21 @@ bot.on('/exchange', (msg) => {
         })
 });
 
-bot.on('/hide', (msg) => {
+bot.on('/hide', async (msg) => {
 
     let date = new Date(Date.now());
 
-    const createQuery = `INSERT INTO history_users (query, user_name, user_id, date, answer) VALUES ($1, $2, $3, $4, $5) RETURNING *`;
+    const rows = await Helper.checkAccount(msg.from.id);
+
+    if (!rows.length) {
+        rows = await Helper.insertAccount(msg);
+    }
+
+    const createQuery = `INSERT INTO history (account_id, date, query, response) VALUES ($1, $2, $3, $4) RETURNING *`;
     const values = [
-        msg.text,
-        msg.from.first_name,
-        msg.from.id,
+        rows[0].id,
         date.toISOString(),
+        msg.text,
         'Type /start to show keyboard again.'
     ];
 
@@ -203,16 +223,21 @@ bot.on('/hide', (msg) => {
 
 });
 
-bot.on('/hello', (msg) => {
+bot.on('/hello', async (msg) => {
 
     let date = new Date(Date.now());
 
-    const createQuery = `INSERT INTO history_users (query, user_name, user_id, date, answer) VALUES ($1, $2, $3, $4, $5) RETURNING *`;
+    const rows = await Helper.checkAccount(msg.from.id);
+
+    if (!rows.length) {
+        rows = await Helper.insertAccount(msg);
+    }
+
+    const createQuery = `INSERT INTO history (account_id, date, query, response) VALUES ($1, $2, $3, $4) RETURNING *`;
     const values = [
-        msg.text,
-        msg.from.first_name,
-        msg.from.id,
+        rows[0].id,
         date.toISOString(),
+        msg.text,
         'Welcome! Enter the date in the format \'dd.mm.yyyy\', \'/rates\' \\ \'/rates CURRENCY\' for the current date or \'/exchange UAH SUMM = CURRENCY\''
     ];
 
@@ -227,20 +252,24 @@ bot.on('/hello', (msg) => {
 });
 
 
-bot.on('/start', (msg) => {
+bot.on('/start', async (msg) => {
 
     let date = new Date(Date.now());
 
-    console.log(date.toISOString());
+    const rows = await Helper.checkAccount(msg.from.id);
 
-    const createQuery = `INSERT INTO history_users (query, user_name, user_id, date, answer) VALUES ($1, $2, $3, $4, $5) RETURNING *`;
+    if (!rows.length) {
+        rows = await Helper.insertAccount(msg);
+    }
+
+    const createQuery = `INSERT INTO history (account_id, date, query, response) VALUES ($1, $2, $3, $4) RETURNING *`;
     const values = [
-        msg.text,
-        msg.from.first_name,
-        msg.from.id,
+        rows[0].id,
         date.toISOString(),
+        msg.text,
         `See keyboard below.`
     ];
+
     db.query(createQuery, values)
         .then(() => {
             console.log('kkk')
