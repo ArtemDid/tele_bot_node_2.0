@@ -300,6 +300,56 @@ server.get('/', (req, res) => {
         })
 })
 
+server.post('/rates', async (req, res) => {
+
+    let date = new Date(Date.now());
+    // let day = date.getDate();
+    let month = date.getMonth() + 1;
+    let year = date.getFullYear();
+    let mas = [];
+    let i = 0;
+    while (true) {
+        await axios({
+            method: 'get',
+            url: `https://api.privatbank.ua/p24api/exchange_rates?json&date=01.${month}.${year}`
+        })
+            .then(async response => {
+
+                let itemUSD = response.data.exchangeRate.filter(item => item.currency === req.body.rate);
+
+                if (itemUSD.length) {
+
+                    let saleRate = itemUSD[0].saleRate ? itemUSD[0].saleRate : itemUSD[0].saleRateNB;
+                    let purchaseRate = itemUSD[0].purchaseRate ? itemUSD[0].purchaseRate : itemUSD[0].purchaseRateNB;
+
+                    mas.push({ saleRate, purchaseRate, month })
+
+                    console.log(mas)
+
+                    if(month>1){
+                        month--;
+                    }
+                    else{
+                        year--;
+                        month=12;
+                    }
+                    if(i===11){
+                        return res.status(201).send({ mas, 'success': true });
+                    }
+                    else{
+                        i++;
+                    }
+
+                }
+                else return res.status(400).send({ 'message': 'Not found', 'success': false });
+
+            })
+            .catch(error => {
+                return res.status(400).send({ 'message': error, 'success': false });
+            })
+    }
+})
+
 // app.get('/', Auth.verifyToken, (req, res) => {
 //     return res.status(200).send({ 'message': 'OK!' });
 // });
