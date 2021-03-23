@@ -80,11 +80,6 @@ bot.on('/start', async (msg) => {
 
 });
 
-
-// app.get('/', Auth.verifyToken, (req, res) => {
-//     return res.status(200).send({ 'message': 'OK!' });
-// });
-
 server.get('/', UserWithDb.listHistory);
 server.get('/users', UserWithDb.listUsers);
 server.post('/create', UserWithDb.create);

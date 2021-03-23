@@ -50,6 +50,7 @@ const User = {
     },
 
     async login(req, res) {
+        console.log(req.body)
         if (!req.body.email || !req.body.password) {
             return res.status(400).send({ 'message': 'Some values are missing', 'success': false });
         }
@@ -84,7 +85,7 @@ const User = {
 
         db.query(createQuery, null)
             .then(response => {
-                res.status(200).send(response);
+                res.status(200).send(response.rows);
             })
             .catch(error => {
                 res.status(500).send(error);
