@@ -124,7 +124,7 @@ const User = {
                         let saleRate = itemUSD[0].saleRate ? itemUSD[0].saleRate : itemUSD[0].saleRateNB;
                         let purchaseRate = itemUSD[0].purchaseRate ? itemUSD[0].purchaseRate : itemUSD[0].purchaseRateNB;
 
-                        mas.push({ saleRate, purchaseRate, month })
+                        mas.push({month, saleRate, purchaseRate })
 
                         console.log(mas)
 
@@ -135,7 +135,7 @@ const User = {
                             year--;
                             month = 12;
                         }
-                        if (i === 11) {
+                        if (i === 4) {
                             return res.status(201).send({ mas, 'success': true });
                         }
                         else {
