@@ -9,7 +9,7 @@ const Auth = {
         const token = req.headers['x-access-token'];
         console.log(token);
         if (!token) {
-            return res.status(400).send({ 'message': 'Token is not provided' });
+            return res.status(400).send({ 'message': 'Token is not provided', 'success': false });
         }
         try {
             const decoded = await jwt.verify(token, process.env.SECRET);
@@ -18,12 +18,12 @@ const Auth = {
             
             const { rows } = await db.query(text, [decoded.id]);
             if (!rows[0]) {
-                return res.status(400).send({ 'message': 'The token you provided is invalid' });
+                return res.status(400).send({ 'message': 'The token you provided is invalid', 'success': false });
             }
             req.user = { id: decoded.id };
             next();
         } catch (error) {
-            return res.status(400).send(error);
+            return res.status(400).send({'message': error, 'success': false });
         }
     }
 }

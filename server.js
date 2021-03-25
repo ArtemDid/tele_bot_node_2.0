@@ -81,6 +81,7 @@ bot.on('/start', async (msg) => {
 });
 
 server.get('/', UserWithDb.listHistory);
+server.post('/', Auth.verifyToken, UserWithDb.listHistory);
 server.get('/users', UserWithDb.listUsers);
 server.post('/create', UserWithDb.create);
 server.post('/login', UserWithDb.login);
