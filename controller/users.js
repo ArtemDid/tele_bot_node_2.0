@@ -1,6 +1,8 @@
 const db = require('../db/db.config');
 const Helper = require('./helper');
 const axios = require('axios');
+const crypto = require('crypto');
+const fs = require('fs');
 
 function byField(field) {
     return (a, b) => a[field] > b[field] ? 1 : -1;
@@ -8,50 +10,61 @@ function byField(field) {
 
 
 const User = {
-    async create(req, res) {
-        console.log(req.body);
+    // async create(req, res) {
+    //     console.log(req.body);
 
-        if (!req.body.email || !req.body.password) {
-            return res.status(400).send({ 'message': 'Some values are missing', 'success': false });
-        }
-        if (req.body.email.trim().length === 0 || req.body.password.trim().length === 0) {
-            return res.status(400).send({ 'message': 'Some values are empty', 'success': false });
-        }
-        if (!Helper.isValidEmail(req.body.email)) {
-            return res.status(400).send({ 'message': 'Please enter a valid email address', 'success': false });
-        }
-        if (!Helper.isValidPasswords(req.body.password)) {
-            return res.status(400).send({ 'message': 'Password must contain lowercase, uppercase letters and numbers', 'success': false });
-        }
+    //     if (!req.body.email || !req.body.password) {
+    //         return res.status(400).send({ 'message': 'Some values are missing', 'success': false });
+    //     }
+    //     if (req.body.email.trim().length === 0 || req.body.password.trim().length === 0) {
+    //         return res.status(400).send({ 'message': 'Some values are empty', 'success': false });
+    //     }
+    //     if (!Helper.isValidEmail(req.body.email)) {
+    //         return res.status(400).send({ 'message': 'Please enter a valid email address', 'success': false });
+    //     }
+    //     if (!Helper.isValidPasswords(req.body.password)) {
+    //         return res.status(400).send({ 'message': 'Password must contain lowercase, uppercase letters and numbers', 'success': false });
+    //     }
 
-        if (!await Helper.checkUser(req.body.email)) {
+    //     if (!await Helper.checkUser(req.body.email)) {
 
-            const hashPassword = Helper.hashPassword(req.body.password);
+    //         const hashPassword = Helper.hashPassword(req.body.password);
 
-            console.log(hashPassword);
+    //         console.log(hashPassword);
 
-            const createQuery = `INSERT INTO users(login, password) VALUES($1, $2) returning *`;
-            const values = [
-                req.body.email,
-                hashPassword
-            ];
+    //         const createQuery = `INSERT INTO users(login, password) VALUES($1, $2) returning *`;
+    //         const values = [
+    //             req.body.email,
+    //             hashPassword
+    //         ];
 
-            try {
-                const { rows } = await db.query(createQuery, values);
-                console.log(rows[0].id);
-                const token = Helper.generateToken(rows[0].id);
-                console.log(token);
-                return res.status(201).send({ token, 'success': true });
-            } catch (error) {
-                console.log("eee", error);
-                if (error.routine === '_bt_check_unique') {
-                    return res.status(400).send({ 'message': 'User with that EMAIL already exist', 'success': false })
-                }
-                return res.status(400).send({ 'message': error, 'success': false });
-            }
-        }
-        else return res.status(400).send({ 'message': 'A user with this login already exists.', 'success': false });
-    },
+    //         try {
+    //             const { rows } = await db.query(createQuery, values);
+    //             console.log(rows[0].id);
+    //             const token = Helper.generateToken(rows[0].id);
+    //             console.log(token);
+
+    //             const randomString = crypto.randomBytes(5).toString('hex');
+    //             const stream = fs.createWriteStream(`../images/${randomString}.png`);
+              
+    //             stream.on('finish', function () {
+    //               console.log('file has been written');
+    //               res.status(201).send({ token, 'success': true });
+    //             });
+              
+    //             stream.write(Buffer.from(req.body.mas), 'utf-8');
+    //             stream.end();
+
+    //         } catch (error) {
+    //             console.log("eee", error);
+    //             if (error.routine === '_bt_check_unique') {
+    //                 return res.status(400).send({ 'message': 'User with that EMAIL already exist', 'success': false })
+    //             }
+    //             return res.status(400).send({ 'message': error, 'success': false });
+    //         }
+    //     }
+    //     else return res.status(400).send({ 'message': 'A user with this login already exists.', 'success': false });
+    // },
 
     async login(req, res) {
         console.log(req.body)
@@ -102,21 +115,20 @@ const User = {
 
         db.query(createQuery, null)
             .then(response => {
-                res.status(200).send(response);
+                res.status(200).send({ response, 'success': true });
             })
             .catch(error => {
-                res.status(500).send(error);
+                res.status(500).send({ 'message': error, 'success': false });
             })
     },
 
     rates(req, res) {
         let date = new Date(Date.now());
-        let month = date.getMonth() + 0;
+        let month = date.getMonth() + 1;
         let year = date.getFullYear();
         let mas = [];
         let mas2 = [];
         let mas3 = [];
-        let postMonth = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         let i = 0;
         const createQuery = 'SELECT jan, feb, mar, apr, may, june, july, aug, sep, oct, nov, "dec" FROM rates where rate=$1 and now_month=$2 and now_year=$3';
 
@@ -127,7 +139,7 @@ const User = {
                     console.log(rows[0])
 
                     for (key in rows[0]) {
-                        mas.push({ month: postMonth[i], saleRate: rows[0][key] })
+                        mas.push({ month: Object.keys(rows[0])[i], saleRate: rows[0][key] })
                         i++;
                     }
                     i = 0;
@@ -167,10 +179,10 @@ const User = {
                                     }
                                     if (i === 11) {
                                         let date = new Date(Date.now());
-                                        let month = date.getMonth() + 0;
+                                        let month = date.getMonth() + 1;
                                         let year = date.getFullYear();
+
                                         mas.sort(byField('month'));
-                                        // mas.sort((a, b) => { a.month > b.month ? 1 : -1; });
                                         console.log(mas);
                                         mas.forEach(element => {
                                             mas2.push(element.saleRate)
@@ -182,8 +194,7 @@ const User = {
                                         mas3.push(month);
                                         mas2.push(year)
                                         mas3.push(year);
-                                        const createQueryInsert = `INSERT INTO public.rates(jan, feb, mar, apr, may, june, july, aug, sep, oct, nov, "dec", rate, now_month, now_year)
-                                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) returning *`;
+                                       
                                         const createQuerySelectDrop = 'SELECT * FROM rates where rate=$1 and now_month != $2';
                                         const createQueryDrop = 'DELETE FROM rates WHERE id=$1; ';
 
@@ -193,11 +204,12 @@ const User = {
                                                 await db.query(createQueryDrop, [rows[0].id]);
                                                 await db.query(createQueryDrop, [rows[1].id]);
                                             }
-
-
                                         } catch (error) {
                                             return res.status(400).send({ 'message': error, 'success': false });
                                         }
+
+                                        const createQueryInsert = `INSERT INTO public.rates(jan, feb, mar, apr, may, june, july, aug, sep, oct, nov, "dec", rate, now_month, now_year)
+                                        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) returning *`;
 
                                         try {
                                             const { rows } = await db.query(createQueryInsert, mas2);
@@ -221,7 +233,7 @@ const User = {
 
                                                         i = 0;
                                                         for (key in rows[0]) {
-                                                            mas.push({ month: postMonth[i], saleRate: rows[0][key] })
+                                                            mas.push({ month: Object.keys(rows[0])[i], saleRate: rows[0][key] })
                                                             i++;
                                                         }
                                                         i = 0;
