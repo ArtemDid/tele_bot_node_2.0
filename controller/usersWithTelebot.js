@@ -81,8 +81,6 @@ const UserWithTelebot = {
                     }
                     console.log(rows)
 
-                    // console.log(mas)
-                    // console.log(itemUSD)
                     let saleRate = itemUSD[0].saleRate ? itemUSD[0].saleRate : itemUSD[0].saleRateNB;
                     let purchaseRate = itemUSD[0].purchaseRate ? itemUSD[0].purchaseRate : itemUSD[0].purchaseRateNB;
 
