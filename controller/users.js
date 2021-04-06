@@ -31,18 +31,18 @@ const User = {
             console.log(hashPassword);
 
             try {
-                let base64 = null;
-                if (req.body.mas.length) {
-                    base64 = Buffer.from(req.body.mas).toString('base64');
-                    base64 = 'data:image/png;base64,' + base64;
-                    console.log(base64)
-                }
+                // let base64 = null;
+                // if (req.body.mas.length) {
+                //     base64 = Buffer.from(req.body.mas).toString('base64');
+                //     base64 = 'data:image/png;base64,' + base64;
+                //     console.log(base64)
+                // }
 
                 const createQuery = `INSERT INTO users(login, password, path) VALUES($1, $2, $3) returning *`;
                 const values = [
                     req.body.email,
                     hashPassword,
-                    base64
+                    req.body.mas
                 ];
 
                 const { rows } = await db.query(createQuery, values);
