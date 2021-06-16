@@ -90,6 +90,8 @@ server.get('/users', UserWithDb.listUsers);
 server.post('/create', UserWithDb.create);
 server.post('/login', UserWithDb.login);
 server.post('/rates', UserWithDb.rates);
+server.post('/part/history', UserWithDb.partHistory);
+
 server.get('/rates/today', UserWithDb.ratesToday);
 
 server.post('/login/auth', Auth.verifyToken, UserWithDb.login);

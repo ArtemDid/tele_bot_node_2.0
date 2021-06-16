@@ -94,11 +94,32 @@ const User = {
     },
 
     listHistory(req, res) {
-        const createQuery = 'Select history.id, name, query from accounts inner join history on accounts.id=history.account_id ORDER BY history.id ASC';
-
+        let createQuery = 'Select history.id, name, query from accounts inner join history on accounts.id=history.account_id ORDER BY history.id ASC LIMIT 5 OFFSET 0;';
         db.query(createQuery, null)
             .then(response => {
                 let rows = response.rows;
+                createQuery = 'Select COUNT(history.id) from accounts inner join history on accounts.id=history.account_id;';
+                db.query(createQuery, null)
+                    .then(response => {
+                        let count = response.rows;
+                        res.status(200).send({ rows, count, 'success': true });
+                    })
+                    .catch(error => {
+                        res.status(500).send({ 'message': error, 'success': false });
+                    })
+            })
+            .catch(error => {
+                res.status(500).send({ 'message': error, 'success': false });
+            })
+    },
+
+    partHistory(req, res) {
+        console.log(req.body)
+        const createQuery = 'Select history.id, name, query from accounts inner join history on accounts.id=history.account_id ORDER BY history.id ASC LIMIT $1 OFFSET $2;';
+        db.query(createQuery, [req.body.LIMIT, req.body.OFFSET])
+            .then(response => {
+                let rows = response.rows;
+                console.log(rows)
                 res.status(200).send({ rows, 'success': true });
             })
             .catch(error => {
@@ -190,7 +211,7 @@ const User = {
                                         mas3.push(month);
                                         mas2.push(year)
                                         mas3.push(year);
-                                       
+
                                         const createQuerySelectDrop = 'SELECT * FROM rates where rate=$1 and now_month != $2';
                                         const createQueryDrop = 'DELETE FROM rates WHERE id=$1; ';
 
