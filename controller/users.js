@@ -1,6 +1,9 @@
 const db = require('../db/db.config');
 const Helper = require('./helper');
 const axios = require('axios');
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+
 
 function byField(field) {
     return (a, b) => a[field] > b[field] ? 1 : -1;
@@ -137,6 +140,24 @@ const User = {
             .catch(error => {
                 res.status(500).send({ 'message': error, 'success': false });
             })
+    },
+
+    async payment(req, res) {
+        const { id, amount, email, phone } = req.body
+        console.log(req.body)
+        try {
+            const payment = await stripe.paymentIntents.create({
+                payment_method: id,
+                amount,
+                currency: "USD",
+                description: `Order from ${email} - ${phone}`,
+                confirm: true,
+            })
+            res.status(200).json({ status: payment.status })
+        } catch (e) {
+            res.status(400).send(e.message)
+        }
+
     },
 
     rates(req, res) {

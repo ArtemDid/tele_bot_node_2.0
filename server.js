@@ -7,6 +7,7 @@ const UserWithDb = require('./controller/users');
 const Helper = require('./controller/helper');
 const UserWithTelebot = require('./controller/usersWithTelebot');
 const Auth = require('./middleware/auth');
+
 require('dotenv').config();
 const crypto = require('crypto');
 const fs = require('fs');
@@ -91,6 +92,7 @@ server.post('/create', UserWithDb.create);
 server.post('/login', UserWithDb.login);
 server.post('/rates', UserWithDb.rates);
 server.post('/part/history', UserWithDb.partHistory);
+server.post('/payment', UserWithDb.payment);
 
 server.get('/rates/today', UserWithDb.ratesToday);
 
